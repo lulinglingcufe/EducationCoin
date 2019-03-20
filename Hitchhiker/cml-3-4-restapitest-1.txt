@@ -1,0 +1,351 @@
+docker stop $(docker ps -a -q) 
+docker  rm $(docker ps -a -q) 
+
+启动fabric网络
+fabric-1
+cd /home/buwei/caliper/network/fabric/2org1peer/
+
+docker-compose -f  docker-compose-1.2.1fabric.yaml up -d
+docker-compose -f  docker-compose-1.2.1fabric.yaml down
+
+
+✖ Starting business network definition. This may take a minute...
+Error: Error trying to start business network. Error: Failed to connect to any peer event hubs. It is required that at least 1 event hub has been connected to receive the commit event
+Command failed
+
+rpc error: code = Canceled desc = context canceled
+
+是json文件的 event hub 写错了吗？
+vim /home/buwei/tmp/composer/org1/byfn-network-org1.json 
+
+
+docker exec -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/users/Admin@org1.example.com/msp" peer0.org1.example.com peer channel create -o orderer.example.com:7050 -c mychannel -f /etc/hyperledger/configtx/mychannel.tx
+
+docker exec -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/users/Admin@org1.example.com/msp" peer0.org1.example.com peer channel fetch config -o orderer.example.com:7050 -c mychannel mychannel.block
+
+docker exec -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/users/Admin@org1.example.com/msp" peer0.org1.example.com peer  channel join -b mychannel.block
+
+docker exec -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/users/Admin@org2.example.com/msp" peer0.org2.example.com peer channel fetch config -o orderer.example.com:7050 -c mychannel mychannel.block
+
+docker exec -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/users/Admin@org2.example.com/msp" peer0.org2.example.com peer  channel join -b mychannel.block
+
+
+
+
+
+
+
+
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer/token-network.bna:/home/composer/token-network.bna \
+  -v /home/buwei/tmp/composer/org1/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer/org1:/home/composer/loc-stage \
+  hyperledger/composer-cli:latest \
+  network install -c PeerAdmin@hlfv1  -a token-network.bna
+  
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer/token-network.bna:/home/composer/token-network.bna \
+  -v /home/buwei/tmp/composer/org2/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer/org2:/home/composer/loc-stage \
+  hyperledger/composer-cli:latest \
+  network install -c PeerAdmin@hlfv1  -a token-network.bna
+
+
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer/token-network.bna:/home/composer/token-network.bna \
+  -v /home/buwei/tmp/composer/org1/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer/org1:/home/composer/loc-stage \
+  hyperledger/composer-cli:latest \
+  network start -n token-network -V 0.0.2-deploy.1 -c PeerAdmin@hlfv1 -A admin -S adminpw -f /home/composer/loc-stage/token-network.card
+    
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer/org1/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer/org1:/home/composer/loc-stage \
+  hyperledger/composer-cli:latest \
+  card import -f /home/composer/loc-stage/token-network.card
+  
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer/org1/.loc-card-store:/home/composer/.composer \
+  hyperledger/composer-cli:latest \
+  transaction submit -c admin@token-network -d '{"$class": "token.InitCompany"}'
+  
+  
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer/org1/.loc-card-store:/home/composer/.composer \
+  hyperledger/composer-cli:latest \
+  transaction submit -c admin@token-network -d '{"$class": "token.InitCentralBank"}'
+
+docker run \
+  -d \
+  --network 2org1peer_default \
+  --name rest \
+  -v /home/buwei/tmp/composer/org1/.loc-card-store:/home/composer/.composer \
+  -e COMPOSER_CARD=admin@token-network \
+  -e COMPOSER_NAMESPACES=never \
+  -p 3000:3000 \
+hyperledger/composer-rest-server:latest
+
+http://10.214.144.224:3000/explorer
+###############################
+227 docker3上面先启动hitcher 测试一下
+cd /home/ubuntu/lulingling/hitchhiker
+
+docker-compose -f docker-compose.yml  up -d
+
+http://10.214.144.227:8080
+8080
+
+http://10.214.144.224:3000/api/Company
+
+docker logs -f 9927a1e7750a
+docker logs -f 8f5bb9b0009a
+好像只有 couchdb.org1.example.com 在相应请求
+G:\blockchainGroup\fabric使用\cml-fabric\数字教育项目\cml-11-19-multidocker
+这个的参数可以参考  重复数  50 并发数 50
+
+9927a1e7750a        hyperledger/fabric-couchdb:0.4.10                                                                                          "tini -- /docker-e..."   49 minutes ago      Up 49 minutes       4369/tcp, 9100/tcp, 0.0.0.0:5984->5984/tcp       couchdb.org1.example.com
+8f5bb9b0009a        hyperledger/fabric-couchdb:0.4.10                                                                                          "tini -- /docker-e..."   49 minutes ago      Up 49 minutes       4369/tcp, 9100/tcp, 0.0.0.0:6984->5984/tcp       couchdb.org2.example.com
+
+
+但是如果通过query去请求，那两个合约容器都会有反应。
+如果只是get user。那只有一个DB有反应。
+好像也不是。可能有query的话，就等于是建立了 index，所以查起来比较快。？？
+结果稳定下来的查询结果也就25吧。。根本不差多少。
+
+query 结果
+
+70 76 101
+25 27 27
+
+###############################
+
+现在写query的 get request
+
+curl -X GET --header 'Accept: application/json' 'http://10.214.144.224:3000/api/queries/GetUserTokenRechargeUserR?user=resource%3Atoken.User%23test370%40qq.com'
+
+
+curl -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' -d '{ \ 
+   "$class": "token.UserTokenRecharge", \ 
+   "tokenRechargeID": "recharGE2", \ 
+   "confirmBank": "R", \ 
+   "tokenNum": 100, \ 
+   "user": "resource:token.User#test370%40qq.com" \ 
+ }' 'http://10.214.144.224:3000/api/UserTokenRecharge'
+ 
+
+
+curl -X GET --header 'Accept: application/json' 'http://10.214.144.224:3000/api/queries/GetUserTokenRechargeUserR?user=resource%3Atoken.User%23test372%40qq.com'
+
+ 
+###############################
+
+{
+  "$class": "token.UserTokenRecharge",
+  "tokenRechargeID": "recharGE2",
+  "confirmBank": "R",
+  "tokenNum": 100,
+  "user": "resource:token.User#test370@qq.com"
+}
+
+
+resource:token.User#User11@email.com
+###############################
+{
+  "$class": "token.UserTokenRecharge",
+  "tokenRechargeID": "recharge2",
+  "confirmBank": "N",
+  "tokenNum": 100,
+  "user": "resource:token.User#test372@qq.com"
+}
+
+{
+  "$class": "token.UserTokenRecharge",
+  "tokenRechargeID": "recharge3",
+  "confirmBank": "N",
+  "tokenNum": 100,
+  "user": "resource:token.User#test372@qq.com"
+}
+
+{
+  "$class": "token.UserTokenRecharge",
+  "tokenRechargeID": "recharge4",
+  "confirmBank": "N",
+  "tokenNum": 100,
+  "user": "resource:token.User#test372@qq.com"
+}
+
+{
+  "$class": "token.UserTokenRecharge",
+  "tokenRechargeID": "recharge5",
+  "confirmBank": "N",
+  "tokenNum": 100,
+  "user": "resource:token.User#test372@qq.com"
+}
+
+{
+  "$class": "token.UserTokenRecharge",
+  "tokenRechargeID": "recharge6",
+  "confirmBank": "N",
+  "tokenNum": 100,
+  "user": "resource:token.User#test372@qq.com"
+}
+###############################
+{
+  "$class": "token.UserTokenRecharge",
+  "tokenRechargeID": "recharge12",
+  "confirmBank": "R",
+  "tokenNum": 100,
+  "user": "resource:token.User#test372@qq.com"
+}
+
+{
+  "$class": "token.UserTokenRecharge",
+  "tokenRechargeID": "recharge13",
+  "confirmBank": "R",
+  "tokenNum": 100,
+  "user": "resource:token.User#test372@qq.com"
+}
+
+{
+  "$class": "token.UserTokenRecharge",
+  "tokenRechargeID": "recharge14",
+  "confirmBank": "R",
+  "tokenNum": 100,
+  "user": "resource:token.User#test372@qq.com"
+}
+
+{
+  "$class": "token.UserTokenRecharge",
+  "tokenRechargeID": "recharge15",
+  "confirmBank": "R",
+  "tokenNum": 100,
+  "user": "resource:token.User#test372@qq.com"
+}
+
+{
+  "$class": "token.UserTokenRecharge",
+  "tokenRechargeID": "recharge16",
+  "confirmBank": "R",
+  "tokenNum": 100,
+  "user": "resource:token.User#test372@qq.com"
+}
+###############################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###############################
+65ff8b967aee
+
+50763bad848f
+
+
+docker exec -it 65ff8b967aee /bin/sh
+export https_proxy="http://10.77.18.247:3130" 
+
+docker exec -it 50763bad848f /bin/bash 
+export https_proxy="http://10.77.18.247:3130"
+cd /chaincode/output; npm install --production
+
+ps aux|grep npm
+gdb --batch --eval-command 'call exit(0)' --pid <process id>
+gdb --batch --eval-command 'call exit(0)' --pid 6162
+gdb --batch --eval-command 'call exit(0)' --pid 6177
+
+
+root      6162  0.0  0.0   4496   648 ?        Ss   17:02   0:00 /bin/sh -c cp -R /chaincode/input/src/. /chaincode/output && cd /chaincode/output && npm install --production
+root      6177  0.0  0.0   4496   644 ?        Ss   17:02   0:00 /bin/sh -c cp -R /chaincode/input/src/. /chaincode/output && cd /chaincode/output && npm install --production
+
+这个不行因为是org1是channel的creator；不过实际原因应该并非如此，只是刚刚 挂载目录搞错了
+
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer/token-network.bna:/home/composer/token-network.bna \
+  -v /home/buwei/tmp/composer/org2/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer/org2:/home/composer/loc-stage \
+  hyperledger/composer-cli:latest \
+  network start -n token-network -V 0.0.2-deploy.1 -c PeerAdmin@hlfv1 -A admin -S adminpw -f /home/composer/loc-stage/token-network.card
+
+  
+
+  
+这个就直接启动两个合约容器了
+  
+
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer/org2/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer/org2:/home/composer/loc-stage \
+  hyperledger/composer-cli:latest \
+  card import -f /home/composer/loc-stage/token-network.card
+
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer/org2/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer/org2:/home/composer/loc-stage \
+  hyperledger/composer-cli:latest \
+  card list
+  
+  
+  
+docker run \
+  --rm \
+  --network muticomposer_default \
+  -v /root/lulingling-fabric/muticomposer/.loc-card-store:/home/composer/.composer \
+  hyperledger/composer-cli:latest \
+  transaction submit -c admin@token-network -d '{"$class": "token.InitCompany"}'
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

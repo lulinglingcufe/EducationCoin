@@ -1,0 +1,151 @@
+namespace token
+
+
+enum IfSign {  //用户充值请求审核状态
+  o Y
+  o N
+  o R
+}
+
+
+abstract participant Business identified by email {
+  o String email
+  o Double accountBalance
+}
+
+/**
+ * A CentralBank is a type of participant in the network
+ */
+participant CentralBank extends Business {
+  o Double totalIssueToken
+}
+
+participant Regulator extends Business {
+}
+
+/**
+ * A Company is a type of participant in the network
+ */
+participant Company extends Business {
+}
+
+
+
+/**
+ * A User is a type of participant in the network
+ */
+participant User extends Business {
+}
+
+
+transaction InitCentralBank {
+}
+
+
+transaction InitCompany {
+}
+
+transaction InitContract {
+}
+
+transaction InitService {
+}
+
+transaction InitUser {
+}
+
+
+//没有用到的definition
+asset IssueTokenSign identified by issueTokenSignId {
+  o String issueTokenSignId  //发币请求ID
+  o IfSign confirmSignR2
+  o Double transferNum
+  --> CentralBank confirmer1
+}
+
+
+asset UserTokenRecharge identified by tokenRechargeID {
+  o String tokenRechargeID  //充值请求ID
+  o IfSign confirmBank
+  o Double tokenNum
+  --> User user
+}
+
+
+
+transaction UserRecharge {
+  o String[] logs optional  
+  o Double tokenNum   //用户充值金额
+  o String rechargeID  //用户充值ID
+  --> User user
+}
+
+transaction CheckUserRecharge {
+  o String[] logs optional   //确认用户充值成功
+  --> UserTokenRecharge rechargeID 
+  //--> CentralBank bank    硬编码bank
+}
+
+transaction RejectUserRecharge {
+  o String[] logs optional   //确认用户充值失败
+  --> UserTokenRecharge rechargeID 
+}
+
+/**
+ * A transaction type for token movements
+ */
+transaction TokenTransferU_U {  //用户课程币转账
+  o String[] logs optional
+  o Double transferNum
+  o String transferID
+    --> User fromuser
+    --> User to
+}
+
+
+asset Contract identified by contractID {
+  o String contractID  //权益分配ID
+  o Double platformPer   //分配给平台的百分比
+  o Double companyPer
+}
+
+asset Service identified by serviceID {
+  o String serviceID  //课程ID
+  o String serviceName  //课程名称
+  o Double servicePrice  //课程价格 
+  --> Company company  //课程提供商
+}
+
+transaction UserConsumeService {
+  o String[] logs optional   //用户购买某种服务
+  --> Service serviceID 
+  // --> Contract contractID  硬编码
+  --> User user
+  // --> Company company
+  // --> CentralBank bank
+}
+
+
+
+
+//一些没有用到的definition
+transaction ConfirmSign1B {  
+  o String[] logs optional
+  o Double transferNum    //中央账户请求发币（充值）
+  o String issueTokenSignId
+  --> CentralBank confirmer1
+}
+
+transaction ConfirmSign2R {
+  o String[] logs optional
+  o Double transferNum
+  --> IssueTokenSign issuetokensign  //确认发币请求ID
+  --> CentralBank confirmer1
+}
+
+transaction IssueToken2 {
+  o String[] logs optional
+  o Double tokenNum
+  o String issueID
+  --> CentralBank issuer
+}

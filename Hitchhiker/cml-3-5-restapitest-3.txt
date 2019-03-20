@@ -1,0 +1,258 @@
+Fabric-3上的query测试
+224
+cd /home/buwei/caliper/network/fabric/2org1peer/
+vim docker-compose-1.2.1fabric.yaml
+docker-compose -f  org2224-1.2.1.yaml up -d
+docker-compose -f  org2224-1.2.1.yaml down
+
+docker stop $(docker ps -a -q) 
+docker  rm $(docker ps -a -q) 
+
+[root@224 2org1peer]# docker images
+REPOSITORY                                                                                                                    TAG                 IMAGE ID            CREATED             SIZE
+dev-peer0.org1.example.com-token-network-0.0.2-deploy.1-f5c8d96187fdb7d2080c0e3a21efa954770c9abfd3091e6d4d5f896716636cc1      latest              e4062a5e755d        3 hours ago         1.47 GB
+dev-peer0.org2.example.com-token-network-0.0.2-deploy.1-23d2fabb1c20c01106657e6d1c5749e6dc7be7ed4c6c167fb43d116371b1e168      latest              7489704fd8d9        3 hours ago         1.47 GB
+
+224 是org2
+cd ~
+docker save e4062a5e755d -o fabric-peer0-org1-token-network-0.0.2-deploy.1.tar
+scp fabric-peer0-org1-token-network-0.0.2-deploy.1.tar root@10.214.144.223:/root/lulingling_fabric
+
+223
+#srv309
+
+docker load < /root/lulingling_fabric/fabric-peer0-org1-token-network-0.0.2-deploy.1.tar
+
+docker tag e4062a5e755d dev-peer0.org1.example.com-token-network-0.0.2-deploy.1-f5c8d96187fdb7d2080c0e3a21efa954770c9abfd3091e6d4d5f896716636cc1
+################################
+json文件也需要改变一下的；还有挂载目录，这个得当心地弄一下。
+先启动网络
+确保启动的网络是正确的，fabric版本正确，composer版本正确，端口映射正确。
+docker-compose的版本
+（要把这个代码开源出来其实是不容易的，要花很多的时间）
+
+226
+ssh root@10.214.144.226
+#srv309
+
+order
+
+cd /root/lulingling-fabric/network/fabric/2org1peer
+cp  ca-orderer.yaml  ca-orderer-1.2.1.yaml
+vim ca-orderer-1.2.1.yaml
+docker-compose -f ca-orderer-1.2.1.yaml up -d
+docker-compose -f ca-orderer-1.2.1.yaml down
+
+223
+cd /home/buwei/fabric-1.1/caliper/network/fabric/2org1peer/
+cp org1223.yaml  org1223-1.2.1.yaml 
+vim org1223-1.2.1.yaml 
+
+docker-compose -f org1223-1.2.1.yaml up -d
+docker-compose -f org1223-1.2.1.yaml down
+
+docker exec -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/users/Admin@org1.example.com/msp" peer0.org1.example.com peer channel create -o orderer.example.com:7050 -c mychannel -f /etc/hyperledger/configtx/mychannel.tx
+
+docker exec -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/users/Admin@org1.example.com/msp" peer0.org1.example.com peer channel fetch config -o orderer.example.com:7050 -c mychannel mychannel.block
+
+docker exec -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/users/Admin@org1.example.com/msp" peer0.org1.example.com peer  channel join -b mychannel.block
+
+
+224
+
+cd /home/buwei/caliper/network/fabric/2org1peer
+cp org2224.yaml org2224-1.2.1.yaml
+vim org2224-1.2.1.yaml
+docker-compose -f org2224-1.2.1.yaml up -d
+docker-compose -f org2224-1.2.1.yaml down
+
+docker exec -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/users/Admin@org2.example.com/msp" peer0.org2.example.com peer channel fetch config -o orderer.example.com:7050 -c mychannel mychannel.block
+
+docker exec -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/users/Admin@org2.example.com/msp" peer0.org2.example.com peer  channel join -b mychannel.block
+
+################################
+然后 install 合约
+这个在223的目录上是第一次，所以要小心一点。首先看一下composer cli的版本是不是准确、同步的。
+晕倒，我都忘记了，这次我是用fabric 1.2.1 做的实验，所以223上还需要重新拉一下镜像
+
+
+网络已经启动好了，明天安装 启动 链码，做实验
+
+curl 直接初始化
+
+先准备json文件
+
+
+
+
+
+224
+cd /home/buwei/caliper/network/fabric/2org1peer
+vim composer-multi-org2.json
+
+rm -f /home/buwei/tmp/composer3/org2/byfn-network-org2.json
+rm -f -r /home/buwei/tmp/composer3/
+
+echo /home/buwei/tmp/composer3/org2/byfn-network-org2.json
+
+mkdir -p /home/buwei/tmp/composer3/org2/.loc-card-store
+chmod -R 777 /home/buwei/tmp/composer3
+
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer3/org2/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer3/org2:/home/composer/loc-stage \
+  -v /home/buwei/caliper/network/fabric/config/crypto-config/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp:/home/composer/PeerAdmin \
+  hyperledger/composer-cli:latest \
+  card create -p loc-stage/byfn-network-org2.json -u PeerAdmin -r PeerAdmin -r ChannelAdmin -f loc-stage/PeerAdmin@byfn-network-org2.card -c PeerAdmin/signcerts/Admin@org2.example.com-cert.pem -k PeerAdmin/keystore/key.pem
+  
+  
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer3/org2/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer3/org2:/home/composer/loc-stage \
+  -v /home/buwei/caliper/network/fabric/config/crypto-config/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp:/home/composer/PeerAdmin \
+  hyperledger/composer-cli:latest \
+card import -f /home/composer/loc-stage/PeerAdmin@byfn-network-org2.card 
+
+
+
+
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer/token-network.bna:/home/composer/token-network.bna \
+  -v /home/buwei/tmp/composer3/org2/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer3/org2:/home/composer/loc-stage \
+  hyperledger/composer-cli:latest \
+  network install -c PeerAdmin@hlfv1  -a token-network.bna
+
+
+
+
+223
+cd /home/buwei/fabric-1.1/caliper/network/fabric/2org1peer/
+rm -f -r /home/buwei/tmp/composer3
+
+mkdir -p /home/buwei/tmp/composer3/org1/.loc-card-store
+chmod -R 777 /home/buwei/tmp/composer3
+
+echo /home/buwei/tmp/composer3/org1/byfn-network-org1.json
+
+
+
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer3/org1/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer3/org1:/home/composer/loc-stage \
+  -v /home/buwei/fabric-1.1/caliper/network/fabric/config/crypto-config/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp:/home/composer/PeerAdmin \
+  hyperledger/composer-cli:latest \
+  card create -p loc-stage/byfn-network-org1.json -u PeerAdmin -r PeerAdmin -r ChannelAdmin -f loc-stage/PeerAdmin@byfn-network-org1.card -c PeerAdmin/signcerts/Admin@org1.example.com-cert.pem -k PeerAdmin/keystore/key.pem
+  
+  
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer3/org1/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer3/org1:/home/composer/loc-stage \
+  -v /home/buwei/fabric-1.1/caliper/network/fabric/config/crypto-config/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp:/home/composer/PeerAdmin \
+  hyperledger/composer-cli:latest \
+card import -f /home/composer/loc-stage/PeerAdmin@byfn-network-org1.card 
+
+224 到223 
+scp  /home/buwei/tmp/composer/token-network.bna root@10.214.144.223:/home/buwei/tmp/composer3
+223
+#srv309
+chmod 777 /home/buwei/tmp/composer3/token-network.bna
+
+
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer3/token-network.bna:/home/composer/token-network.bna \
+  -v /home/buwei/tmp/composer3/org1/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer3/org1:/home/composer/loc-stage \
+  hyperledger/composer-cli:latest \
+  network install -c PeerAdmin@hlfv1  -a token-network.bna
+
+0.0.2-deploy.1
+
+然后在224上启动链码
+
+
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer/token-network.bna:/home/composer/token-network.bna \
+  -v /home/buwei/tmp/composer3/org2/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer3/org2:/home/composer/loc-stage \
+  hyperledger/composer-cli:latest \
+  network start -n token-network -V 0.0.2-deploy.1 -c PeerAdmin@hlfv1 -A admin -S adminpw -f /home/composer/loc-stage/token-network.card
+
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer3/org2/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer3/org2:/home/composer/loc-stage \
+  -v /home/buwei/caliper/network/fabric/config/crypto-config/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp:/home/composer/PeerAdmin \
+  hyperledger/composer-cli:latest \
+card import -f /home/composer/loc-stage/token-network.card
+  
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer3/org2/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer3/org2:/home/composer/loc-stage \
+  -v /home/buwei/caliper/network/fabric/config/crypto-config/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp:/home/composer/PeerAdmin \
+  hyperledger/composer-cli:latest \
+card list
+  
+  
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer3/org2/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer3/org2:/home/composer/loc-stage \
+  -v /home/buwei/caliper/network/fabric/config/crypto-config/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp:/home/composer/PeerAdmin \
+  hyperledger/composer-cli:latest \
+card list --card admin@token-network
+  
+ 
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer3/org2/.loc-card-store:/home/composer/.composer \
+  hyperledger/composer-cli:latest \
+  transaction submit -c admin@token-network -d '{"$class": "token.InitCompany"}'
+  
+  
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer3/org2/.loc-card-store:/home/composer/.composer \
+  hyperledger/composer-cli:latest \
+  transaction submit -c admin@token-network -d '{"$class": "token.InitCentralBank"}'
+
+http://10.214.144.226:8054/api/v1/enroll
+
+然后在223上启动链码
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer3/token-network.bna:/home/composer/token-network.bna \
+  -v /home/buwei/tmp/composer3/org1/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer3/org1:/home/composer/loc-stage \
+  hyperledger/composer-cli:latest \
+  network start -n token-network -V 0.0.2-deploy.1 -c PeerAdmin@hlfv1 -A admin -S adminpw -f /home/composer/loc-stage/token-network.card
+
+
+
+224 还是先确认一下 json文件有没有写错吧
+vim /home/buwei/tmp/composer/org1/byfn-network-org1.json
+果然是mychannel写错了
+
+
+

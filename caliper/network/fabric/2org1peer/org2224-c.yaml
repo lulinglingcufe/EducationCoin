@@ -1,0 +1,12 @@
+version: '2'
+
+services:
+  couchdb.org2.example.com:
+    container_name: couchdb.org2.example.com
+    image: hyperledger/fabric-couchdb:x86_64-0.4.6
+    ports:
+      - 5984:5984
+    environment:
+      DB_URL: http://localhost:5984/member_db
+
+

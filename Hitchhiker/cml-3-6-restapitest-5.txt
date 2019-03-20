@@ -1,0 +1,236 @@
+fabric 5的情况，应该会比较方便了
+启动网络 scp DB 把DB 的版本改一下；224 223 上的版本也需要改一下。
+
+
+224
+cd /home/buwei/caliper/network/fabric/2org1peer/
+cp org2224-noc.yaml org2224-noc-1.2.1.yaml
+vim org2224-noc-1.2.1.yaml
+
+docker-compose -f  org2224-noc-1.2.1.yaml up -d
+docker-compose -f  org2224-noc-1.2.1.yaml down
+
+docker exec -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/users/Admin@org2.example.com/msp" peer0.org2.example.com peer channel fetch config -o orderer.example.com:7050 -c mychannel mychannel.block
+
+docker exec -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/users/Admin@org2.example.com/msp" peer0.org2.example.com peer  channel join -b mychannel.block
+
+
+226
+ssh root@10.214.144.226
+#srv309
+
+order
+
+cd /root/lulingling-fabric/network/fabric/2org1peer
+cp  ca-orderer.yaml  ca-orderer-1.2.1.yaml
+vim ca-orderer-1.2.1.yaml
+docker-compose -f ca-orderer-1.2.1.yaml up -d
+docker-compose -f ca-orderer-1.2.1.yaml down
+
+
+223
+cd /home/buwei/fabric-1.1/caliper/network/fabric/2org1peer/
+cp org1223-noc.yaml org1223-noc-1.2.1.yaml
+vim org1223-noc-1.2.1.yaml 
+
+docker-compose -f org1223-noc-1.2.1.yaml up -d
+docker-compose -f org1223-noc-1.2.1.yaml down
+
+docker exec -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/users/Admin@org1.example.com/msp" peer0.org1.example.com peer channel create -o orderer.example.com:7050 -c mychannel -f /etc/hyperledger/configtx/mychannel.tx
+
+docker exec -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/users/Admin@org1.example.com/msp" peer0.org1.example.com peer channel fetch config -o orderer.example.com:7050 -c mychannel mychannel.block
+
+docker exec -e "CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp/users/Admin@org1.example.com/msp" peer0.org1.example.com peer  channel join -b mychannel.block
+
+
+229
+cd /home/ubuntu/lulingling
+docker-compose -f org1223-c-fabric-1.2.1.yaml up -d
+docker-compose -f org1223-c-fabric-1.2.1.yaml down
+
+
+
+230
+cd /home/ubuntu/Lulingling
+docker-compose -f org2224-c-fabric-1.2.1.yaml up -d
+docker-compose -f org2224-c-fabric-1.2.1.yaml down
+
+224
+cp  org2224-c.yaml  org2224-c-fabric-1.2.1.yaml
+vim org2224-c-fabric-1.2.1.yaml
+
+cp org1223-c.yaml  org1223-c-fabric-1.2.1.yaml
+vim org1223-c-fabric-1.2.1.yaml
+
+hyperledger/fabric-couchdb                                                                                                    0.4.10              3092eca241fc        8 months ago        1.61 GB
+
+docker save 3092eca241fc -o fabric-couchdb-0.4.10.tar
+scp fabric-couchdb-0.4.10.tar ubuntu@10.214.144.230:/home/ubuntu/Lulingling
+#srv309
+docker load < /home/ubuntu/lulingling/fabric-couchdb-0.4.10.tar
+
+docker tag 3092eca241fc hyperledger/fabric-couchdb:0.4.10
+
+scp fabric-couchdb-0.4.10.tar ubuntu@10.214.144.229:/home/ubuntu/lulingling
+
+
+
+
+
+
+223
+rm -f -r /home/buwei/tmp/composer5
+
+mkdir -p /home/buwei/tmp/composer5/org1/.loc-card-store
+chmod -R 777 /home/buwei/tmp/composer5
+
+echo /home/buwei/tmp/composer5/org1/byfn-network-org1.json
+
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer5/org1/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer5/org1:/home/composer/loc-stage \
+  -v /home/buwei/fabric-1.1/caliper/network/fabric/config/crypto-config/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp:/home/composer/PeerAdmin \
+  hyperledger/composer-cli:latest \
+  card create -p loc-stage/byfn-network-org1.json -u PeerAdmin -r PeerAdmin -r ChannelAdmin -f loc-stage/PeerAdmin@byfn-network-org1.card -c PeerAdmin/signcerts/Admin@org1.example.com-cert.pem -k PeerAdmin/keystore/key.pem
+  
+  
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer5/org1/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer5/org1:/home/composer/loc-stage \
+  -v /home/buwei/fabric-1.1/caliper/network/fabric/config/crypto-config/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp:/home/composer/PeerAdmin \
+  hyperledger/composer-cli:latest \
+card import -f /home/composer/loc-stage/PeerAdmin@byfn-network-org1.card 
+
+scp /home/buwei/tmp/composer3/token-network.bna /home/buwei/tmp/composer5/
+
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer5/token-network.bna:/home/composer/token-network.bna \
+  -v /home/buwei/tmp/composer5/org1/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer5/org1:/home/composer/loc-stage \
+  hyperledger/composer-cli:latest \
+  network install -c PeerAdmin@hlfv1  -a token-network.bna
+
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer5/token-network.bna:/home/composer/token-network.bna \
+  -v /home/buwei/tmp/composer5/org1/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer5/org1:/home/composer/loc-stage \
+  hyperledger/composer-cli:latest \
+  network start -n token-network -V 0.0.2-deploy.1 -c PeerAdmin@hlfv1 -A admin -S adminpw -f /home/composer/loc-stage/token-network.card
+
+  
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer5/org1/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer5/org1:/home/composer/loc-stage \
+  -v /home/buwei/fabric-1.1/caliper/network/fabric/config/crypto-config/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp:/home/composer/PeerAdmin \
+  hyperledger/composer-cli:latest \
+card import -f /home/composer/loc-stage/token-network.card
+
+  
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer5/org1/.loc-card-store:/home/composer/.composer \
+  hyperledger/composer-cli:latest \
+  transaction submit -c admin@token-network -d '{"$class": "token.InitCompany"}'
+
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer5/org1/.loc-card-store:/home/composer/.composer \
+  hyperledger/composer-cli:latest \
+  transaction submit -c admin@token-network -d '{"$class": "token.InitCentralBank"}'
+
+
+docker run \
+  -d \
+  --network 2org1peer_default \
+  --name rest \
+  -v /home/buwei/tmp/composer5/org1/.loc-card-store:/home/composer/.composer \
+  -e COMPOSER_CARD=admin@token-network \
+  -e COMPOSER_NAMESPACES=never \
+  -p 3000:3000 \
+hyperledger/composer-rest-server:latest
+    
+  
+  
+  
+  
+  
+
+224
+
+rm -f -r /home/buwei/tmp/composer5/
+
+
+mkdir -p /home/buwei/tmp/composer5/org2/.loc-card-store
+chmod -R 777 /home/buwei/tmp/composer5
+scp /home/buwei/tmp/composer/token-network.bna /home/buwei/tmp/composer5/
+
+
+echo /home/buwei/tmp/composer5/org2/byfn-network-org2.json
+
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer5/org2/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer5/org2:/home/composer/loc-stage \
+  -v /home/buwei/caliper/network/fabric/config/crypto-config/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp:/home/composer/PeerAdmin \
+  hyperledger/composer-cli:latest \
+  card create -p loc-stage/byfn-network-org2.json -u PeerAdmin -r PeerAdmin -r ChannelAdmin -f loc-stage/PeerAdmin@byfn-network-org2.card -c PeerAdmin/signcerts/Admin@org2.example.com-cert.pem -k PeerAdmin/keystore/key.pem
+  
+  
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer5/org2/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer5/org2:/home/composer/loc-stage \
+  -v /home/buwei/caliper/network/fabric/config/crypto-config/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp:/home/composer/PeerAdmin \
+  hyperledger/composer-cli:latest \
+card import -f /home/composer/loc-stage/PeerAdmin@byfn-network-org2.card 
+
+
+
+
+docker run \
+  --rm \
+  --network 2org1peer_default \
+  -v /home/buwei/tmp/composer5/token-network.bna:/home/composer/token-network.bna \
+  -v /home/buwei/tmp/composer5/org2/.loc-card-store:/home/composer/.composer \
+  -v /home/buwei/tmp/composer5/org2:/home/composer/loc-stage \
+  hyperledger/composer-cli:latest \
+  network install -c PeerAdmin@hlfv1  -a token-network.bna
+
+http://10.214.144.223:3000/explorer
+###############################  
+
+
+ curl -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' -d '{  "$class": "token.UserTokenRecharge",   "tokenRechargeID": "recharge1",  "confirmBank": "N", "tokenNum": 100,  "user": "resource:token.User#test372%40qq.com" }' 'http://10.214.144.223:3000/api/UserTokenRecharge'
+ 
+ curl -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' -d '{  "$class": "token.UserTokenRecharge",   "tokenRechargeID": "recharge2",  "confirmBank": "N", "tokenNum": 100,  "user": "resource:token.User#test372%40qq.com" }' 'http://10.214.144.223:3000/api/UserTokenRecharge'
+  
+ curl -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' -d '{  "$class": "token.UserTokenRecharge",   "tokenRechargeID": "recharge3",  "confirmBank": "N", "tokenNum": 100,  "user": "resource:token.User#test372%40qq.com" }' 'http://10.214.144.223:3000/api/UserTokenRecharge' 
+
+ curl -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' -d '{  "$class": "token.UserTokenRecharge",   "tokenRechargeID": "recharge4",  "confirmBank": "N", "tokenNum": 100,  "user": "resource:token.User#test372%40qq.com" }' 'http://10.214.144.223:3000/api/UserTokenRecharge' 
+ 
+ curl -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' -d '{  "$class": "token.UserTokenRecharge",   "tokenRechargeID": "recharge5",  "confirmBank": "N", "tokenNum": 100,  "user": "resource:token.User#test372%40qq.com" }' 'http://10.214.144.223:3000/api/UserTokenRecharge' 
+###############################
+ curl -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' -d '{  "$class": "token.UserTokenRecharge",   "tokenRechargeID": "recharge11",  "confirmBank": "R", "tokenNum": 100,  "user": "resource:token.User#test372%40qq.com" }' 'http://10.214.144.223:3000/api/UserTokenRecharge'
+
+ curl -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' -d '{  "$class": "token.UserTokenRecharge",   "tokenRechargeID": "recharge21",  "confirmBank": "R", "tokenNum": 100,  "user": "resource:token.User#test372%40qq.com" }' 'http://10.214.144.223:3000/api/UserTokenRecharge'
+  
+ curl -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' -d '{  "$class": "token.UserTokenRecharge",   "tokenRechargeID": "recharge31",  "confirmBank": "R", "tokenNum": 100,  "user": "resource:token.User#test372%40qq.com" }' 'http://10.214.144.223:3000/api/UserTokenRecharge' 
+
+ curl -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' -d '{  "$class": "token.UserTokenRecharge",   "tokenRechargeID": "recharge41",  "confirmBank": "R", "tokenNum": 100,  "user": "resource:token.User#test372%40qq.com" }' 'http://10.214.144.223:3000/api/UserTokenRecharge' 
+ 
+ curl -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' -d '{  "$class": "token.UserTokenRecharge",   "tokenRechargeID": "recharge51",  "confirmBank": "R", "tokenNum": 100,  "user": "resource:token.User#test372%40qq.com" }' 'http://10.214.144.223:3000/api/UserTokenRecharge' 
+
