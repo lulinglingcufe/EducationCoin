@@ -29,6 +29,8 @@ docker stop $(docker ps -a -q) //stop all the containers
 docker rm $(docker ps -a -q)   //delete all the containers
 ```
 
+### Basic knowledge of Composer
+
 If you want to learn about the chaincode language of Hyperledger Composer, we recommend you go through the guides of Composer. This is the github repository URL of [Composer](https://github.com/hyperledger/composer) . And in the **Getting started with building an application** section we have:
 
 - [Introduction](https://hyperledger.github.io/composer/latest/introduction/introduction.html)
