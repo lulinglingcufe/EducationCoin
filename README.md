@@ -15,7 +15,7 @@ EduCoin is a demo of enterprise-class application build on top of Fabric. It ser
 
 First We describe the EduCoin Smart Contract based on Hyperledger Composer and explain how to deploy it in a single machine.
 
-### Experimental environment requirements
+### 1. Experimental environment requirements
 
 - docker
 - docker-compose 
@@ -29,7 +29,7 @@ docker stop $(docker ps -a -q) //stop all the containers
 docker rm $(docker ps -a -q)   //delete all the containers
 ```
 
-### Basic knowledge of Composer
+### 2. Basic knowledge of Composer
 
 If you want to learn about the chaincode language of Hyperledger Composer, we recommend you go through the guides of Composer. This is the github repository URL of [Composer](https://github.com/hyperledger/composer) . And in the **Getting started with building an application** section we have:
 
@@ -40,9 +40,9 @@ If you want to learn about the chaincode language of Hyperledger Composer, we re
 
 These guide links are very useful to understand Composer. Note that, for Chinese users, if you want to watch the videos in YouTube and use the **[composer playground](https://composer-playground.mybluemix.net/)**,  you should solve the Great Firewall problem.
 
-### Foucus on learning Comoser smart contract & Our guide
+### 3. Foucus on learning Comoser smart contract & Our guide
 
-Because we use docker in the whole experiment, we don't need to install npm packages like *composer-cli@0.20* and *composer-rest-server@0.20* introduced in **[Installing the development environment for composer](https://hyperledger.github.io/composer/latest/installing/development-tools.html/)**. We also prepare a **guide** for you to focus on [learning the composer smart contract language](https://github.com/lulinglingcufe/LearnComposer).
+Because we **use docker in the whole experiment**, we don't need to install npm packages like *composer-cli@0.20* and *composer-rest-server@0.20* introduced in **[Installing the development environment for composer](https://hyperledger.github.io/composer/latest/installing/development-tools.html/)**. We also prepare a **guide** for you to focus on [learning the composer smart contract language](https://github.com/lulinglingcufe/LearnComposer).
 
 
 
