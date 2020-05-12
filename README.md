@@ -1,9 +1,11 @@
 # EduCoin
 This tutorial hasn't been complete yet, we will finish it recently. Thank you for your interest : )
 
-
-
 EduCoin is a demo of enterprise-class application build on top of Fabric. It serves as a good guide to learn Hyperledger Fabric, Composer and Caliper development. The experiment results demonstrate the performance and bottlenecks of Fabric applications.
+
+# Paper
++ [1] Lu L, Chen J, Tian Z, et al. [EduCoin: a Secure and Efficient Payment Solution for MOOC Environment](https://www.researchgate.net/publication/338169125_EduCoin_a_Secure_and_Efficient_Payment_Solution_for_MOOC_Environment). IEEE Blockchain 2019.
+
 
 # EduCoin Smart Contract
 
