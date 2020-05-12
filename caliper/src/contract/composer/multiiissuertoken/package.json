@@ -40,7 +40,7 @@
     "composer-client": "next",
     "composer-common": "next",
     "composer-connector-embedded": "next",
-    "eslint": "^3.6.1",
+    "eslint": "^7.0.0",
     "jsdoc": "^3.5.5",
     "license-check-and-add": "~2.3.0",
     "mkdirp": "^0.5.1",
